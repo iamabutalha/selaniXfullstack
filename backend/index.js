@@ -1,0 +1,24 @@
+import express from "express";
+import userRoutes from "./routes/user.routes.js";
+import notesRoutes from "./routes/note.routes.js";
+import dotenv from "dotenv";
+import connectDB from "./utils/db.js";
+import cors from "cors";
+dotenv.config();
+const app = express();
+
+app.use(express.json());
+app.use(cors("*"));
+
+connectDB();
+const PORT = process.env.PORT || 5000;
+app.get("/test", (req, res) => {
+  res.send("API is working");
+});
+
+app.use("/api/v1/users", userRoutes);
+app.use("/api/v1/notes", notesRoutes);
+
+app.listen(PORT, () => {
+  console.log(`Server is runnning on ${PORT}`);
+});

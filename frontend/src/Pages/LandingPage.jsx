@@ -27,7 +27,8 @@ export default function Landing() {
     <Box
       sx={{
         minHeight: "100vh",
-        background: "linear-gradient(135deg, #1976d2, #0d47a1)",
+        background:
+          "linear-gradient(90deg,rgba(42, 123, 155, 1) 0%, rgba(87, 199, 133, 1) 50%, rgba(237, 221, 83, 1) 100%)",
         color: "white",
       }}
     >
@@ -36,8 +37,8 @@ export default function Landing() {
           Build Secure Apps Faster 🚀
         </Typography>
         <Typography variant="h6" sx={{ maxWidth: 600, mb: 4 }}>
-          A modern authentication system with clean UI, JWT security and
-          scalable architecture.
+          An anonymous messaging platform that prioritizes your privacy and
+          security.
         </Typography>
         <Box display="flex" gap={2}>
           <Button

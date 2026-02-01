@@ -24,56 +24,35 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const { user, setUser, setToken, token } = useContext(UserContext);
 
+  const [todos, setTodos] = useState([]);
   const [todoText, setTodoText] = useState("");
   const [todoDate, setTodoDate] = useState("");
   const [filter, setFilter] = useState("all");
+
   const [editId, setEditId] = useState(null);
   const [editText, setEditText] = useState("");
   const [editDate, setEditDate] = useState("");
 
-  console.log("User:", user);
-  console.log("Token:", token);
-
-  // 🔹 Demo Todos (API later)
-  const [todos, setTodos] = useState([
-    {
-      id: 1,
-      text: "Finish Todo Dashboard UI",
-      date: "2026-02-02",
-      completed: false,
-    },
-    {
-      id: 2,
-      text: "Practice DSA",
-      date: "2026-02-03",
-      completed: true,
-    },
-  ]);
+  /* ================= FETCH TODOS ================= */
+  const fetchTodos = async () => {
+    try {
+      const res = await axios.get(
+        `${import.meta.env.VITE_BACKEND_URL}/api/v1/todos/todo`,
+        {
+          headers: { "x-auth-token": token },
+        },
+      );
+      if (res.status === 200) setTodos(res.data.todos);
+    } catch {
+      toast.error("Failed to fetch todos");
+    }
+  };
 
   useEffect(() => {
-    const fetchTodos = async () => {
-      try {
-        let res = await axios.get(
-          import.meta.env.VITE_BACKEND_URL + "/api/v1/todos/todo",
-          {
-            headers: {
-              "x-auth-token": token,
-            },
-          },
-        );
-
-        if (res.status === 200) {
-          setTodos(res.data.todos);
-        } else {
-          toast.error("Failed to fetch todos");
-        }
-      } catch (error) {
-        toast.error("Error fetching todos");
-      }
-    };
     fetchTodos();
   }, []);
 
+  /* ================= LOGOUT ================= */
   const logout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
@@ -82,62 +61,105 @@ export default function Dashboard() {
     navigate("/login", { replace: true });
   };
 
-  /* ---------------- ADD TODO ---------------- */
-  const addTodo = () => {
-    if (!todoText || !todoDate) {
+  /* ================= ADD TODO (POST) ================= */
+  const addTodo = async () => {
+    if (!todoText || !todoDate)
       return toast.error("Todo text and date are required");
+
+    try {
+      const res = await axios.post(
+        `${import.meta.env.VITE_BACKEND_URL}/api/v1/todos/todo`,
+        {
+          title: todoText,
+          date: todoDate,
+          userId: user._id,
+        },
+        {
+          headers: { "x-auth-token": token },
+        },
+      );
+
+      if (res.status === 201) {
+        toast.success("Todo added");
+        setTodoText("");
+        setTodoDate("");
+        fetchTodos();
+      }
+    } catch {
+      toast.error("Failed to add todo");
     }
-
-    setTodos([
-      ...todos,
-      {
-        id: Date.now(),
-        text: todoText,
-        date: todoDate,
-        completed: false,
-      },
-    ]);
-
-    setTodoText("");
-    setTodoDate("");
-    toast.success("Todo added");
   };
 
-  /* ---------------- TOGGLE COMPLETE ---------------- */
-  const toggleTodo = (id) => {
-    setTodos(
-      todos.map((todo) =>
-        todo.id === id ? { ...todo, completed: !todo.completed } : todo,
-      ),
-    );
+  /* ================= TOGGLE COMPLETE (PATCH) ================= */
+  const toggleTodo = async (id, completed) => {
+    try {
+      const res = await axios.patch(
+        `${import.meta.env.VITE_BACKEND_URL}/api/v1/todos/todo/`,
+        { id },
+        {
+          headers: { "x-auth-token": token },
+        },
+      );
+      if (res.status === 200) fetchTodos();
+    } catch {
+      toast.error("Failed to toggle todo");
+    }
   };
 
-  /* ---------------- DELETE TODO ---------------- */
-  const deleteTodo = (id) => {
-    setTodos(todos.filter((todo) => todo.id !== id));
-    toast.success("Todo deleted");
+  const updateTodo = async (id) => {
+    if (!editText || !editDate) return toast.error("Fields cannot be empty");
+
+    try {
+      const res = await axios.put(
+        `${import.meta.env.VITE_BACKEND_URL}/api/v1/todos/todo/`,
+        {
+          title: editText,
+          date: editDate,
+          id,
+          isCompleted: false,
+        },
+        {
+          headers: { "x-auth-token": token },
+        },
+      );
+
+      if (res.status === 200) {
+        toast.success("Todo updated");
+        setEditId(null);
+        fetchTodos();
+      } else {
+        toast.error("Failed to update todo11");
+      }
+    } catch (error) {
+      toast.error("Failed to update todo");
+      console.log(error);
+    }
   };
 
-  /* ---------------- EDIT TODO ---------------- */
+  const deleteTodo = async (id) => {
+    try {
+      const res = await axios.delete(
+        `${import.meta.env.VITE_BACKEND_URL}/api/v1/todos/todo`,
+
+        {
+          data: { id },
+          headers: { "x-auth-token": token },
+        },
+      );
+
+      if (res.status === 200) {
+        toast.success("Todo deleted");
+        fetchTodos();
+      }
+    } catch {
+      toast.error("Failed to delete todo");
+    }
+  };
+
   const startEdit = (todo) => {
-    setEditId(todo.id);
-    setEditText(todo.text);
+    setEditId(todo._id);
+    setEditText(todo.title);
     setEditDate(todo.date);
-  };
-
-  const saveEdit = (id) => {
-    if (!editText || !editDate) {
-      return toast.error("Fields cannot be empty");
-    }
-
-    setTodos(
-      todos.map((todo) =>
-        todo.id === id ? { ...todo, text: editText, date: editDate } : todo,
-      ),
-    );
-
-    setEditId(null);
-    toast.success("Todo updated");
   };
 
   const filteredTodos = useMemo(() => {
@@ -150,30 +172,21 @@ export default function Dashboard() {
     <Container maxWidth="md" sx={{ mt: 4 }}>
       <Toaster />
 
-      {/* Header */}
-      <Box
-        display="flex"
-        justifyContent="space-between"
-        alignItems="center"
-        mb={4}
-      >
+      {/* HEADER */}
+      <Box display="flex" justifyContent="space-between" mb={4}>
         <Box>
           <Typography variant="h5">Todo Dashboard</Typography>
           <Typography variant="body2" color="text.secondary">
             Logged in as <strong>{user?.name}</strong> ({user?.email})
           </Typography>
         </Box>
-        <Button color="error" variant="outlined" onClick={logout}>
+        <Button variant="outlined" color="error" onClick={logout}>
           Logout
         </Button>
       </Box>
 
-      {/* Add Todo */}
+      {/* ADD TODO */}
       <Paper sx={{ p: 3, mb: 3 }}>
-        <Typography variant="h6" mb={2}>
-          Add Todo
-        </Typography>
-
         <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
           <TextField
             fullWidth
@@ -194,11 +207,11 @@ export default function Dashboard() {
         </Stack>
       </Paper>
 
-      {/* Filters */}
-      <Box mb={2} display="flex" justifyContent="center">
+      {/* FILTER */}
+      <Box display="flex" justifyContent="center" mb={2}>
         <ToggleButtonGroup
-          value={filter}
           exclusive
+          value={filter}
           onChange={(e, val) => val && setFilter(val)}
         >
           <ToggleButton value="all">All</ToggleButton>
@@ -207,45 +220,31 @@ export default function Dashboard() {
         </ToggleButtonGroup>
       </Box>
 
-      {/* Todo List */}
+      {/* TODO LIST */}
       <Stack spacing={2}>
-        {filteredTodos.length === 0 && (
-          <Typography align="center" color="text.secondary">
-            No todos found
-          </Typography>
-        )}
-
         {filteredTodos.map((todo) => (
-          <Card
-            key={todo.id}
-            sx={{
-              opacity: todo.completed ? 0.55 : 1,
-              transition: "0.3s",
-            }}
-          >
+          <Card key={todo._id} sx={{ opacity: todo.completed ? 0.55 : 1 }}>
             <CardContent>
-              {editId === todo.id ? (
-                /* EDIT MODE */
-                <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+              {editId === todo._id ? (
+                <Stack direction="row" spacing={2} alignItems="center">
                   <TextField
                     fullWidth
-                    value={editText}
+                    value={editText || todoText}
                     onChange={(e) => setEditText(e.target.value)}
                   />
                   <TextField
                     type="date"
-                    value={editDate}
+                    value={editDate || todo.createdAt.slice(0, 10)}
                     onChange={(e) => setEditDate(e.target.value)}
                   />
-                  <IconButton color="success" onClick={() => saveEdit(todo.id)}>
-                    <FiSave size={18} />
+                  <IconButton onClick={() => updateTodo(todo._id)}>
+                    <FiSave />
                   </IconButton>
                   <IconButton onClick={() => setEditId(null)}>
-                    <FiX size={18} />
+                    <FiX />
                   </IconButton>
                 </Stack>
               ) : (
-                /* VIEW MODE */
                 <Box
                   display="flex"
                   justifyContent="space-between"
@@ -253,20 +252,18 @@ export default function Dashboard() {
                 >
                   <Box>
                     <Typography
-                      variant="body1"
                       sx={{
                         cursor: "pointer",
                         textDecoration: todo.completed
                           ? "line-through"
                           : "none",
                       }}
-                      onClick={() => toggleTodo(todo.id)}
+                      onClick={() => toggleTodo(todo._id, todo.completed)}
                     >
-                      {todo.text}
+                      {todo.title}
                     </Typography>
-
-                    <Typography variant="caption" color="text.secondary">
-                      Due: {todo.date}
+                    <Typography variant="caption">
+                      Due: {new Date(todo.createdAt).toLocaleDateString()}
                     </Typography>
                   </Box>
 
@@ -277,13 +274,13 @@ export default function Dashboard() {
                       size="small"
                     />
                     <IconButton onClick={() => startEdit(todo)}>
-                      <FiEdit size={18} />
+                      <FiEdit />
                     </IconButton>
                     <IconButton
                       color="error"
-                      onClick={() => deleteTodo(todo.id)}
+                      onClick={() => deleteTodo(todo._id)}
                     >
-                      <FiTrash2 size={18} />
+                      <FiTrash2 />
                     </IconButton>
                   </Stack>
                 </Box>

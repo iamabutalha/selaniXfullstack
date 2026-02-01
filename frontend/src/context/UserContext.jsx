@@ -15,9 +15,11 @@ export const UserProvider = ({ children }) => {
     if (token) {
       // Optionally decode token or fetch /me from API
       const savedUser = JSON.parse(localStorage.getItem("user"));
+      const token = localStorage.getItem("token");
+      setToken(token);
       setUser(savedUser);
     }
-  }, [token]);
+  }, []);
 
   const values = {
     user,

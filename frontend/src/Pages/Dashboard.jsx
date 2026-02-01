@@ -1,79 +1,78 @@
-import React, { useState, useEffect, useContext } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import axios from "axios";
-
+import React, { useState, useContext, useMemo, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Container,
   TextField,
   Button,
   Typography,
   Box,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
   Paper,
+  Card,
+  CardContent,
+  Chip,
+  Stack,
+  ToggleButton,
+  ToggleButtonGroup,
+  IconButton,
 } from "@mui/material";
-import { Toaster, toast } from "react-hot-toast";
-import gsap from "gsap";
+import { FiEdit, FiTrash2, FiSave, FiX } from "react-icons/fi";
 import { UserContext } from "../context/UserContext";
+import { Toaster, toast } from "react-hot-toast";
+import axios from "axios";
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const [message, setMessage] = useState("");
   const { user, setUser, setToken, token } = useContext(UserContext);
-  const [messages, setMessages] = useState([]);
 
-  const fetchMessages = async () => {
-    try {
-      const res = await axios.get(
-        import.meta.env.VITE_BACKEND_URL + "/api/v1/notes/note",
-        {
-          headers: {
-            "x-auth-token": token,
-          },
-        },
-      );
+  const [todoText, setTodoText] = useState("");
+  const [todoDate, setTodoDate] = useState("");
+  const [filter, setFilter] = useState("all");
+  const [editId, setEditId] = useState(null);
+  const [editText, setEditText] = useState("");
+  const [editDate, setEditDate] = useState("");
 
-      if (res.status === 200) {
-        setMessages(res.data.notes);
-      } else {
-        toast.error("Failed to fetch messages");
-      }
-    } catch (error) {
-      toast.error("Failed to fetch messages: " + error.message);
-    }
-  };
+  console.log("User:", user);
+  console.log("Token:", token);
+
+  // 🔹 Demo Todos (API later)
+  const [todos, setTodos] = useState([
+    {
+      id: 1,
+      text: "Finish Todo Dashboard UI",
+      date: "2026-02-02",
+      completed: false,
+    },
+    {
+      id: 2,
+      text: "Practice DSA",
+      date: "2026-02-03",
+      completed: true,
+    },
+  ]);
 
   useEffect(() => {
-    fetchMessages();
-  }, []);
-
-  const sendMessage = async () => {
-    if (!message) return toast.error("Message cannot be empty");
-
-    try {
-      const res = await axios.post(
-        import.meta.env.VITE_BACKEND_URL + "/api/v1/notes/note",
-        { text: message },
-        {
-          headers: {
-            "x-auth-token": token,
+    const fetchTodos = async () => {
+      try {
+        let res = await axios.get(
+          import.meta.env.VITE_BACKEND_URL + "/api/v1/todos/todo",
+          {
+            headers: {
+              "x-auth-token": token,
+            },
           },
-        },
-      );
-      if (res.status === 201) {
-        toast.success("Message sent successfully");
-        setMessage("");
-        await fetchMessages();
-      } else {
-        toast.error("Failed to send message");
+        );
+
+        if (res.status === 200) {
+          setTodos(res.data.todos);
+        } else {
+          toast.error("Failed to fetch todos");
+        }
+      } catch (error) {
+        toast.error("Error fetching todos");
       }
-    } catch (error) {
-      toast.error("Failed to send message: " + error.message);
-    }
-  };
+    };
+    fetchTodos();
+  }, []);
 
   const logout = () => {
     localStorage.removeItem("token");
@@ -83,16 +82,83 @@ export default function Dashboard() {
     navigate("/login", { replace: true });
   };
 
+  /* ---------------- ADD TODO ---------------- */
+  const addTodo = () => {
+    if (!todoText || !todoDate) {
+      return toast.error("Todo text and date are required");
+    }
+
+    setTodos([
+      ...todos,
+      {
+        id: Date.now(),
+        text: todoText,
+        date: todoDate,
+        completed: false,
+      },
+    ]);
+
+    setTodoText("");
+    setTodoDate("");
+    toast.success("Todo added");
+  };
+
+  /* ---------------- TOGGLE COMPLETE ---------------- */
+  const toggleTodo = (id) => {
+    setTodos(
+      todos.map((todo) =>
+        todo.id === id ? { ...todo, completed: !todo.completed } : todo,
+      ),
+    );
+  };
+
+  /* ---------------- DELETE TODO ---------------- */
+  const deleteTodo = (id) => {
+    setTodos(todos.filter((todo) => todo.id !== id));
+    toast.success("Todo deleted");
+  };
+
+  /* ---------------- EDIT TODO ---------------- */
+  const startEdit = (todo) => {
+    setEditId(todo.id);
+    setEditText(todo.text);
+    setEditDate(todo.date);
+  };
+
+  const saveEdit = (id) => {
+    if (!editText || !editDate) {
+      return toast.error("Fields cannot be empty");
+    }
+
+    setTodos(
+      todos.map((todo) =>
+        todo.id === id ? { ...todo, text: editText, date: editDate } : todo,
+      ),
+    );
+
+    setEditId(null);
+    toast.success("Todo updated");
+  };
+
+  const filteredTodos = useMemo(() => {
+    if (filter === "completed") return todos.filter((t) => t.completed);
+    if (filter === "pending") return todos.filter((t) => !t.completed);
+    return todos;
+  }, [filter, todos]);
+
   return (
-    <Container sx={{ mt: 2 }}>
+    <Container maxWidth="md" sx={{ mt: 4 }}>
+      <Toaster />
+
+      {/* Header */}
       <Box
         display="flex"
         justifyContent="space-between"
         alignItems="center"
-        mb={3}
+        mb={4}
       >
         <Box>
-          <Typography variant="h5">Dashboard</Typography>
+          <Typography variant="h5">Todo Dashboard</Typography>
           <Typography variant="body2" color="text.secondary">
             Logged in as <strong>{user?.name}</strong> ({user?.email})
           </Typography>
@@ -102,41 +168,130 @@ export default function Dashboard() {
         </Button>
       </Box>
 
-      <Paper sx={{ p: 2, mb: 2 }}>
-        <Typography variant="h6" mb={1}>
-          Post an Anonymous Message
+      {/* Add Todo */}
+      <Paper sx={{ p: 3, mb: 3 }}>
+        <Typography variant="h6" mb={2}>
+          Add Todo
         </Typography>
-        <Box display="flex" gap={2}>
+
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
           <TextField
             fullWidth
-            placeholder="Write something anonymously..."
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
+            label="Todo"
+            value={todoText}
+            onChange={(e) => setTodoText(e.target.value)}
           />
-          <Button variant="contained" onClick={sendMessage}>
-            Send
+          <TextField
+            type="date"
+            label="Date"
+            InputLabelProps={{ shrink: true }}
+            value={todoDate}
+            onChange={(e) => setTodoDate(e.target.value)}
+          />
+          <Button variant="contained" onClick={addTodo}>
+            Add
           </Button>
-        </Box>
+        </Stack>
       </Paper>
 
-      <Paper sx={{ p: 3 }}>
-        <Typography variant="h6" mb={2}>
-          Anonymous Feed
-        </Typography>
-        <Box sx={{ maxHeight: 400, overflowY: "auto" }}>
-          {messages.map((msg) => (
-            <Box
-              key={msg.id}
-              sx={{ p: 1, mb: 1, borderBottom: "1px solid #eee" }}
-            >
-              <Typography variant="body1">{msg.text}</Typography>
-              <Typography variant="caption" color="text.secondary">
-                {new Date(msg.createdAt).toLocaleString()}
-              </Typography>
-            </Box>
-          ))}
-        </Box>
-      </Paper>
+      {/* Filters */}
+      <Box mb={2} display="flex" justifyContent="center">
+        <ToggleButtonGroup
+          value={filter}
+          exclusive
+          onChange={(e, val) => val && setFilter(val)}
+        >
+          <ToggleButton value="all">All</ToggleButton>
+          <ToggleButton value="completed">Completed</ToggleButton>
+          <ToggleButton value="pending">Pending</ToggleButton>
+        </ToggleButtonGroup>
+      </Box>
+
+      {/* Todo List */}
+      <Stack spacing={2}>
+        {filteredTodos.length === 0 && (
+          <Typography align="center" color="text.secondary">
+            No todos found
+          </Typography>
+        )}
+
+        {filteredTodos.map((todo) => (
+          <Card
+            key={todo.id}
+            sx={{
+              opacity: todo.completed ? 0.55 : 1,
+              transition: "0.3s",
+            }}
+          >
+            <CardContent>
+              {editId === todo.id ? (
+                /* EDIT MODE */
+                <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+                  <TextField
+                    fullWidth
+                    value={editText}
+                    onChange={(e) => setEditText(e.target.value)}
+                  />
+                  <TextField
+                    type="date"
+                    value={editDate}
+                    onChange={(e) => setEditDate(e.target.value)}
+                  />
+                  <IconButton color="success" onClick={() => saveEdit(todo.id)}>
+                    <FiSave size={18} />
+                  </IconButton>
+                  <IconButton onClick={() => setEditId(null)}>
+                    <FiX size={18} />
+                  </IconButton>
+                </Stack>
+              ) : (
+                /* VIEW MODE */
+                <Box
+                  display="flex"
+                  justifyContent="space-between"
+                  alignItems="center"
+                >
+                  <Box>
+                    <Typography
+                      variant="body1"
+                      sx={{
+                        cursor: "pointer",
+                        textDecoration: todo.completed
+                          ? "line-through"
+                          : "none",
+                      }}
+                      onClick={() => toggleTodo(todo.id)}
+                    >
+                      {todo.text}
+                    </Typography>
+
+                    <Typography variant="caption" color="text.secondary">
+                      Due: {todo.date}
+                    </Typography>
+                  </Box>
+
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <Chip
+                      label={todo.completed ? "Completed" : "Pending"}
+                      color={todo.completed ? "success" : "warning"}
+                      size="small"
+                    />
+                    <IconButton onClick={() => startEdit(todo)}>
+                      <FiEdit size={18} />
+                    </IconButton>
+                    <IconButton
+                      color="error"
+                      onClick={() => deleteTodo(todo.id)}
+                    >
+                      <FiTrash2 size={18} />
+                    </IconButton>
+                  </Stack>
+                </Box>
+              )}
+            </CardContent>
+          </Card>
+        ))}
+      </Stack>
     </Container>
   );
 }

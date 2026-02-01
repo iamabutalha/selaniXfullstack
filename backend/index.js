@@ -4,6 +4,7 @@ import notesRoutes from "./routes/note.routes.js";
 import dotenv from "dotenv";
 import connectDB from "./utils/db.js";
 import cors from "cors";
+import todoRoutes from "./routes/todo.routes.js";
 dotenv.config();
 const app = express();
 
@@ -18,6 +19,7 @@ app.get("/test", (req, res) => {
 
 app.use("/api/v1/users", userRoutes);
 app.use("/api/v1/notes", notesRoutes);
+app.use("/api/v1/todos", todoRoutes);
 
 app.listen(PORT, () => {
   console.log(`Server is runnning on ${PORT}`);

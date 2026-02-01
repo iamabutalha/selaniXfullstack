@@ -4,7 +4,7 @@ import { authUser } from "../middlewares/authUser.js";
 
 const router = express.Router();
 
-router.get("/note", authUser, getAllNotes);
+router.get("/note", getAllNotes);
 router.post("/note", authUser, createNote);
 
 export default router;

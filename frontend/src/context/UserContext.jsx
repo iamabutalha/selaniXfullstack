@@ -12,13 +12,11 @@ export const UserProvider = ({ children }) => {
   console.log(user);
 
   useEffect(() => {
-    if (token) {
-      // Optionally decode token or fetch /me from API
-      const savedUser = JSON.parse(localStorage.getItem("user"));
-      const token = localStorage.getItem("token");
-      setToken(token);
-      setUser(savedUser);
-    }
+    // Optionally decode token or fetch /me from API
+    const savedUser = JSON.parse(localStorage.getItem("user"));
+    const token = localStorage.getItem("token");
+    setToken(token);
+    setUser(savedUser);
   }, []);
 
   const values = {

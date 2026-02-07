@@ -1,4 +1,4 @@
-# 📝 Task & Note Manager API
+# 📝 Task Manager API
 
 A RESTful API built with Node.js and Express for managing users, todos, and notes.
 

@@ -9,13 +9,7 @@ dotenv.config();
 const app = express();
 
 app.use(express.json());
-app.use(
-  cors({
-    origin: "http://localhost:5173",
-    methods: ["GET", "POST", "PUT", "DELETE"],
-    allowedHeaders: ["Content-Type", "x-auth-token"],
-  }),
-);
+app.use(cors("*"));
 
 connectDB();
 const PORT = process.env.PORT || 5000;

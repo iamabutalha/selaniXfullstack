@@ -2,6 +2,7 @@ import jwt from "jsonwebtoken";
 import { loginSchema, registerSchema } from "../utils/schema.js";
 import bcrypt from "bcryptjs";
 import User from "../models/User.model.js";
+import cloudinary from "../utils/cloudinary.js";
 export const registerUser = async (req, res) => {
   const { error } = registerSchema.validate(req.body);
   if (error) {
@@ -72,7 +73,12 @@ export const loginUser = async (req, res) => {
     return res.status(200).json({
       message: "Login successful",
       token,
-      user: { _id: user._id, name: user.name, email: user.email },
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        profilePicture: user.profilePicture,
+      },
     });
   } catch (err) {
     console.log(err);
@@ -110,5 +116,31 @@ export const getAllUsers = async (req, res) => {
 
       .status(500)
       .json({ message: "Internal server error", error: error });
+  }
+};
+
+export const updateUserProfilePic = async (req, res) => {
+  console.log("Update user hit");
+
+  try {
+    const userId = req.user._id;
+    const { profilePicture } = req.body;
+    if (!profilePicture) {
+      return res.status(400).json({ message: "Profile picture is required" });
+    }
+
+    const uploadResponse = await cloudinary.uploader.upload(profilePicture);
+
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { profilePicture: uploadResponse.secure_url },
+      { new: true },
+    ).select("-password");
+    return res.status(200).json({ user: updatedUser });
+  } catch (error) {
+    console.error("Error updating user profile:", error);
+    return res
+      .status(500)
+      .json({ message: "Internal server error", error: error.message });
   }
 };

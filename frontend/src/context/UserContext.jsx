@@ -6,7 +6,7 @@ export const UserProvider = ({ children }) => {
   const [user, setUser] = useState(
     JSON.parse(localStorage.getItem("user")) || null,
   );
-  const [token, setToken] = useState(localStorage.getItem("token") || null);
+  const [token, setToken] = useState(null);
 
   console.log(token);
   console.log(user);
@@ -14,8 +14,7 @@ export const UserProvider = ({ children }) => {
   useEffect(() => {
     // Optionally decode token or fetch /me from API
     const savedUser = JSON.parse(localStorage.getItem("user"));
-    const token = localStorage.getItem("token");
-    setToken(token);
+    setToken(localStorage.getItem("token"));
     setUser(savedUser);
   }, []);
 

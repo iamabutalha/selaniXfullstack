@@ -19,6 +19,7 @@ import { FiEdit, FiTrash2, FiSave, FiX } from "react-icons/fi";
 import { UserContext } from "../context/UserContext";
 import { Toaster, toast } from "react-hot-toast";
 import axios from "axios";
+import { useRef } from "react";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -32,6 +33,7 @@ export default function Dashboard() {
   const [editId, setEditId] = useState(null);
   const [editText, setEditText] = useState("");
   const [editDate, setEditDate] = useState("");
+  const [selectedImg, setSelectedImg] = useState(null);
 
   /* ================= FETCH TODOS ================= */
   const fetchTodos = async () => {
@@ -39,11 +41,11 @@ export default function Dashboard() {
       const res = await axios.get(
         `${import.meta.env.VITE_BACKEND_URL}/api/v1/todos/todo`,
         {
-          headers: { "x-auth-token": token },
+          headers: { "x-auth-token": localStorage.getItem("token") },
         },
       );
       if (res.status === 200) setTodos(res.data.todos);
-    } catch {
+    } catch (error) {
       toast.error("Failed to fetch todos");
     }
   };
@@ -52,7 +54,6 @@ export default function Dashboard() {
     fetchTodos();
   }, []);
 
-  /* ================= LOGOUT ================= */
   const logout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
@@ -61,7 +62,6 @@ export default function Dashboard() {
     navigate("/login", { replace: true });
   };
 
-  /* ================= ADD TODO (POST) ================= */
   const addTodo = async () => {
     if (!todoText || !todoDate)
       return toast.error("Todo text and date are required");
@@ -90,7 +90,6 @@ export default function Dashboard() {
     }
   };
 
-  /* ================= TOGGLE COMPLETE (PATCH) ================= */
   const toggleTodo = async (id, completed) => {
     try {
       const res = await axios.patch(
@@ -107,7 +106,7 @@ export default function Dashboard() {
   };
 
   const updateTodo = async (id) => {
-    if (!editText || !editDate) return toast.error("Fields cannot be empty");
+    // if (!editText || !editDate) return toast.error("Fields cannot be empty");
 
     try {
       const res = await axios.put(
@@ -168,6 +167,38 @@ export default function Dashboard() {
     return todos;
   }, [filter, todos]);
 
+  const fileInputRef = useRef(null);
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+
+    reader.readAsDataURL(file);
+
+    reader.onloadend = async () => {
+      const base64Image = reader.result;
+      setSelectedImg(base64Image);
+
+      const res = await axios.put(
+        `${import.meta.env.VITE_BACKEND_URL}/api/v1/users/update-profile-picture`,
+        {
+          profilePicture: base64Image,
+        },
+        {
+          headers: { "x-auth-token": token },
+        },
+      );
+      if (res.status === 200) {
+        toast.success("Profile picture updated");
+        setUser(res.data.user);
+      } else {
+        toast.error("Failed to update profile picture");
+      }
+    };
+  };
+
   return (
     <Container maxWidth="md" sx={{ mt: 4 }}>
       <Toaster />
@@ -179,6 +210,23 @@ export default function Dashboard() {
           <Typography variant="body2" color="text.secondary">
             Logged in as <strong>{user?.name}</strong> ({user?.email})
           </Typography>
+        </Box>
+        <Box display="flex" alignItems="center" gap={2}>
+          <img
+            src={user?.profilePicture || "/avatar.png"}
+            alt="Profile"
+            width="40"
+            height="40"
+            className="items-start"
+            onClick={() => fileInputRef.current.click()}
+          />
+          <input
+            type="file"
+            accept="image/*"
+            ref={fileInputRef}
+            onChange={handleImageUpload}
+            className="hidden"
+          />
         </Box>
         <Button variant="outlined" color="error" onClick={logout}>
           Logout
@@ -229,7 +277,7 @@ export default function Dashboard() {
                 <Stack direction="row" spacing={2} alignItems="center">
                   <TextField
                     fullWidth
-                    value={editText || todoText}
+                    value={editText || todo.title}
                     onChange={(e) => setEditText(e.target.value)}
                   />
                   <TextField

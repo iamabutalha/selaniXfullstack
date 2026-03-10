@@ -1,4 +1,5 @@
 import Todo from "../models/Todo.model.js";
+import { generateTodoDescription } from "../utils/gemini.js";
 
 export const createTodo = async (req, res) => {
   try {
@@ -10,11 +11,14 @@ export const createTodo = async (req, res) => {
 
     const newTodo = new Todo({
       title,
-      description,
+      description: "AI is thinking...",
       userId,
     });
+
     await newTodo.save();
     res.status(201).json(newTodo);
+
+    generateTodoDescription(title, newTodo._id);
   } catch (error) {
     console.error("Error creating todo:", error);
     res.status(500).json({ message: error.message });
